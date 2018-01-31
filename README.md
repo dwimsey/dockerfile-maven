@@ -56,7 +56,7 @@ package` and push it with `mvn deploy`.  Of course you can also say
 <plugin>
   <groupId>com.spotify</groupId>
   <artifactId>dockerfile-maven-plugin</artifactId>
-  <version>${version}</version>
+  <version>${dockerfile-maven-version}</version>
   <executions>
     <execution>
       <id>default</id>
@@ -79,7 +79,7 @@ package` and push it with `mvn deploy`.  Of course you can also say
 A corresponding `Dockerfile` could look like:
 
 ```
-FROM dockerfile/java:oracle-java8
+FROM openjdk:8-jre
 MAINTAINER David Flemström <dflemstr@spotify.com>
 
 ENTRYPOINT ["/usr/bin/java", "-jar", "/usr/share/myservice/myservice.jar"]
@@ -107,9 +107,9 @@ which also greatly speeds up builds.
 You no longer have to say something like:
 
     mvn package
-    mvn docker:build
+    mvn dockerfile:build
     mvn verify
-    mvn docker:push
+    mvn dockerfile:push
     mvn deploy
 
 Instead, it is simply enough to say:
@@ -236,3 +236,59 @@ Then, in your maven settings file, add configuration for the server:
 ```
 
 exactly as you would for any other server configuration.
+
+## Authenticating with maven pom.xml
+
+Since version 1.3.XX, you can authenticate using config from the pom itself.
+Just add configuration similar to:
+
+```xml
+ <plugin>
+    <groupId>com.spotify</groupId>
+    <artifactId>dockerfile-maven-plugin</artifactId>
+    <version>${version}</version>
+    <configuration>
+        <username>repoUserName</username>
+        <password>repoPassword</password>
+        <repository>${docker.image.prefix}/${project.artifactId}</repository>
+        <buildArgs>
+            <JAR_FILE>target/${project.build.finalName}.jar</JAR_FILE>
+        </buildArgs>
+    </configuration>
+</plugin>
+```
+or simpler, 
+```xml
+ <plugin>
+    <groupId>com.spotify</groupId>
+    <artifactId>dockerfile-maven-plugin</artifactId>
+    <version>${version}</version>
+    <configuration>
+        <repository>${docker.image.prefix}/${project.artifactId}</repository>
+        <buildArgs>
+            <JAR_FILE>target/${project.build.finalName}.jar</JAR_FILE>
+        </buildArgs>
+    </configuration>
+</plugin>
+```
+
+with this command line call
+
+    mvn goal -Ddockerfile.username=... -Ddockerfile.password=...
+    
+
+## Skip Docker Goals Bound to Maven Phases
+
+You can pass options to maven to disable the docker goals.
+
+| Maven Option        | What Does _that thing_ Do?           |
+| ------------- |:-------------:|
+| dockerfile.skip | Disables the entire dockerfile plugin; all goals become no-ops. |
+| dockerfile.build.skip | Disables the build goal; it becomes a no-op. |
+| dockerfile.tag.skip | Disables the tag goal; it becomes a no-op. |
+| dockerfile.push.skip | Disables the push goal; it becomes a no-op. |
+
+For example to skip the entire dockerfile plugin:
+```
+mvn clean package -Ddockerfile.skip
+```
